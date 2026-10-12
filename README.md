@@ -5,6 +5,65 @@
 
 GeoCam es una aplicación móvil desarrollada con **Expo SDK 57**, **Expo Router**, **React Native**, **TypeScript**, **OpenStreetMap (Leaflet)** y **Tailwind CSS (NativeWind v4)** que encapsula el hardware del dispositivo en **Custom Hooks tipados**, implementa el ciclo completo de permisos con degradación elegante, y gestiona sensores de movimiento y mapas interactivos.
 
+
+## Actualización Semana 7: base de datos local offline-first
+
+Esta semana GeoCam incorpora persistencia local para que las fotos y sus metadatos sigan disponibles al cerrar y volver a abrir la app, también sin conexión a internet.
+
+### SQLite y esquema Drizzle
+
+- Se agregaron **Expo SQLite**, **Drizzle ORM** y **Drizzle Kit**.
+- La base local se llama `geocam.db`. El proveedor SQLite vive en `app/_layout.tsx` y ejecuta la inicialización antes de presentar las pantallas.
+- SQLite se configura en modo **WAL**.
+- `db/schema.ts` define la tabla `geo_photos` y sus tipos inferidos: identificador, URI local, latitud, longitud, precisión, marca de tiempo de coordenadas, origen (cámara o galería) y fecha de creación. Las coordenadas y la precisión aceptan valores nulos.
+
+### Migraciones y configuración
+
+- Se generó la migración inicial `drizzle/0000_fantastic_cammi.sql` a partir del esquema.
+- `db/migrate.ts` aplica las migraciones de Drizzle cuando se abre la base de datos.
+- `drizzle.config.ts` declara el driver Expo y las rutas del esquema y las migraciones.
+- Babel y Metro incorporan los archivos SQL de migración en el bundle móvil.
+- `npm run db:generate` permite generar una migración cuando cambie el esquema.
+
+### Persistencia de fotos y operaciones
+
+- `context/GeoPhotosContext.tsx` ahora consulta y escribe los registros mediante Drizzle; carga las fotos guardadas al iniciar.
+- `db/photoStorage.ts` copia cada imagen al directorio persistente de documentos de la app. La base guarda esa URI para mantener el acceso sin red y evitar depender de rutas temporales de cámara o galería.
+- Capturar con la cámara e importar desde galería crean registros locales. Si no hay ubicación disponible, la foto se conserva con coordenadas nulas.
+- Eliminar una foto o borrar todas elimina sus registros y los archivos locales asociados.
+- Los errores de guardado y borrado se informan en la interfaz.
+- No se agregó sincronización con servidor: el almacenamiento y las consultas de esta entrega son locales.
+
+### Archivos incorporados o actualizados
+
+- `app/_layout.tsx`: proveedor de SQLite e inicialización.
+- `context/GeoPhotosContext.tsx`: lectura, inserción y eliminación con Drizzle.
+- `db/schema.ts`, `db/migrate.ts` y `db/photoStorage.ts`: esquema, migraciones y archivos persistentes.
+- `drizzle/` y `drizzle.config.ts`: migración generada y configuración Drizzle Kit.
+- `babel.config.js`, `metro.config.js` y `types/sql.d.ts`: soporte para importar migraciones SQL.
+- `package.json` y `package-lock.json`: dependencias y comando de generación.
+
+### Dependencias principales de la Semana 7
+
+- `expo-sqlite` y `expo-file-system` para base de datos y almacenamiento local.
+- `drizzle-orm` para consultas y esquema tipado.
+- `drizzle-kit` y `babel-plugin-inline-import` para generar y empaquetar migraciones.
+
+## Ejecutar y verificar
+
+```bash
+npm install
+npx expo start
+```
+
+Comandos de verificación y migraciones:
+
+```bash
+npx expo lint
+npx tsc --noEmit
+npm run db:generate
+```
+
 ---
 
 ## 📸 Estados de Permiso y Evidencias de Funcionamiento
